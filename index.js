@@ -2,8 +2,7 @@ import * as d3 from 'd3'
 
 export default function StackedBarChart (
   {
-    data,
-    data1
+    data
   },
   {
     containerSelector,
@@ -39,23 +38,27 @@ export default function StackedBarChart (
     .style('width', tooltipWidth / 2)
     .style('opacity', 0);
 
-  updateChart(data, data1)
+  updateChart(data)
 
-  function updateChart(data, data1) {
+  function updateChart(data) {
+
+    const state1 = data[0];
+    const state2 = data[1];
+  
     const yScale = d3
       .scaleBand()
-      .domain(d3.range(0, data.length))
+      .domain(d3.range(0, state1.length))
       .range([0, height])
       .padding(0.1);
 
     // Iterate over each object (row) in data and draw stacked barchart
-    data.forEach((d, row) => {
+    state1.forEach((d, row) => {
       Object.keys(d).forEach((key) => {
         // calculate y-pos of each row for current and future states
         d[key].y = yScale(row);
-        data1[row][key].y = yScale(row);
+        state2[row][key].y = yScale(row);
         d[key].row = row
-        data1[row][key].row = row
+        state1[row][key].row = row
       });
       clicked[row] = false; // track click state per row
       updateRects(d, row);
@@ -73,7 +76,7 @@ export default function StackedBarChart (
         data[key].accumOverlap = totalOverlap; // to offset current x-position based on overlap of all previous rectangles
       }
     }
-    console.log(data)
+ 
     const xScale = d3.scaleLinear().domain([0, totalValue]).range([0, width]);
 
     // Restructure data to be able to stack
@@ -314,8 +317,8 @@ export default function StackedBarChart (
 
   return {
     /* public data update  method */
-    update: ({data, data1}) => {
-      updateChart(data, data1)
+    update: (data) => {
+      updateChart(data)
     },
     /* event subscription method, provides interface for graph specific events e.g. click on node */
     on: (eventName, callback) => {
@@ -326,17 +329,19 @@ export default function StackedBarChart (
           tooltip.transition().style('opacity', 0);
 
           // animate the movment and width of rectanges based on new state
-          const row = findRowValueByKey(data, dd.key);
+          const state1 = data[0];
+          const state2 = data[1];
+          const row = findRowValueByKey(state1, dd.key);
           if (!clicked[row]) {
-            updateRects(data1[row], row);
+            updateRects(state2[row], row);
           } else {
-            updateRects(data[row], row);
+            updateRects(state1[row], row);
           }
           clicked[row] = !clicked[row];
 
           // Call the provided callback with the relevant information
           callback({
-            clickedNodeData: d,
+            clickedNodeData: dd,
           });
         });
       }
