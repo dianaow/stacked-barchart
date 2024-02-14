@@ -14,7 +14,6 @@ export default function StackedBarChart (
 ) {
   const tooltipWidth = 120;
 
-  let clicked = {};
   const container = d3.select(containerSelector);
 
   const svg = container
@@ -38,29 +37,22 @@ export default function StackedBarChart (
     .style('width', tooltipWidth / 2)
     .style('opacity', 0);
 
+  const yScale = d3
+    .scaleBand()
+    .domain(d3.range(0, data.length))
+    .range([0, height])
+    .padding(0.1);
+    
   updateChart(data)
 
   function updateChart(data) {
-
-    const state1 = data[0];
-    const state2 = data[1];
-  
-    const yScale = d3
-      .scaleBand()
-      .domain(d3.range(0, state1.length))
-      .range([0, height])
-      .padding(0.1);
-
     // Iterate over each object (row) in data and draw stacked barchart
-    state1.forEach((d, row) => {
+    data.forEach((d, row) => {
       Object.keys(d).forEach((key) => {
         // calculate y-pos of each row for current and future states
         d[key].y = yScale(row);
-        state2[row][key].y = yScale(row);
         d[key].row = row
-        state1[row][key].row = row
       });
-      clicked[row] = false; // track click state per row
       updateRects(d, row);
     });
   }
@@ -69,7 +61,7 @@ export default function StackedBarChart (
     // Sum of values in a row
     let totalValue = 0;
     let totalOverlap = 0;
-    for (const key in data) {
+    for (const key in data) { // KEY IS SIDS, LDC
       if (data.hasOwnProperty(key)) {
         totalValue += data[key].value - (data[key].overlap || 0);
         totalOverlap += data[key].overlap || 0;
@@ -90,13 +82,14 @@ export default function StackedBarChart (
     const nodes = d3.stack().keys(keys)(dataNew);
    
     nodeG
-      .selectAll(`.node-${row}`)
+      .selectAll(`#node-${row}`)
       .data(nodes, (d) => d.key)
       .join(
         (enter) => {
           const newNode = enter
             .append('g')
-            .attr('class', (d) => `node-${row} node-${d.key}`)
+            .attr('class', (d) => `node-${d.key}`)
+            .attr('id', (d) => `node-${row}`)
             .attr('transform', (d, i) => {
               const { x, y } = getCoords(d[0][0], 0, data[d.key], i);
               return `translate(${x}, ${y})`;
@@ -135,7 +128,7 @@ export default function StackedBarChart (
             });
 
           // enable interactivity that syncs with updated data
-          action(nodeG.selectAll(`.node-${row}`));
+          action(nodeG.selectAll(`#node-${row}`));
 
           return newUpdate;
         },
@@ -315,10 +308,17 @@ export default function StackedBarChart (
     }
   }
 
+
+  
   return {
     /* public data update  method */
-    update: (data) => {
-      updateChart(data)
+    update: (dd) => {
+
+      // animate the movment and width of rectanges based on new state
+      //const row = findRowValueByKey(data, dd.key)
+      const row = dd.row
+      data[row][dd.key] = {...data[row][dd.key], ...dd} //impute the old object with the new object sent in 
+      updateRects(data[row], row)
     },
     /* event subscription method, provides interface for graph specific events e.g. click on node */
     on: (eventName, callback) => {
@@ -327,21 +327,11 @@ export default function StackedBarChart (
           event.preventDefault();
 
           tooltip.transition().style('opacity', 0);
-
-          // animate the movment and width of rectanges based on new state
-          const state1 = data[0];
-          const state2 = data[1];
-          const row = findRowValueByKey(state1, dd.key);
-          if (!clicked[row]) {
-            updateRects(state2[row], row);
-          } else {
-            updateRects(state1[row], row);
-          }
-          clicked[row] = !clicked[row];
-
+          const row = +d3.select(this).attr('id').split('-')[1]
+       
           // Call the provided callback with the relevant information
           callback({
-            clickedNodeData: dd,
+            clickedNodeData: {...dd, row},
           });
         });
       }
