@@ -312,13 +312,16 @@ export default function StackedBarChart (
   
   return {
     /* public data update  method */
-    update: (dd) => {
-
-      // animate the movment and width of rectanges based on new state
+    updateBar: (dd) => {
+      // animate the movment and width of rectanges within a stacked barchart based on new state
       //const row = findRowValueByKey(data, dd.key)
       const row = dd.row
       data[row][dd.key] = {...data[row][dd.key], ...dd} //impute the old object with the new object sent in 
       updateRects(data[row], row)
+    },
+    updateAll: (data) => {
+      // update all stacked barcharts based on new date
+      updateChart(data)
     },
     /* event subscription method, provides interface for graph specific events e.g. click on node */
     on: (eventName, callback) => {
