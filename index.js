@@ -12,6 +12,7 @@ export default function StackedBarChart (
     rectHeight = 20
   } = {}
 ) {
+
   const tooltipWidth = 120;
 
   const container = d3.select(containerSelector);
@@ -44,16 +45,22 @@ export default function StackedBarChart (
     .padding(0.1);
     
   updateChart(data)
-
+  
   function updateChart(data) {
+    
+    data = convertToArray(data)
+    if(!data) return
+
     // Iterate over each object (row) in data and draw stacked barchart
     data.forEach((d, row) => {
-      Object.keys(d).forEach((key) => {
-        // calculate y-pos of each row for current and future states
-        d[key].y = yScale(row);
-        d[key].row = row
-      });
-      updateRects(d, row);
+      if(d) {
+        Object.keys(d).forEach((key) => {
+          // calculate y-pos of each row for current and future states
+          d[key].y = yScale(row);
+          d[key].row = row
+        });
+        updateRects(d, row);
+      }
     });
   }
 
@@ -80,7 +87,7 @@ export default function StackedBarChart (
 
     const keys = Object.keys(data);
     const nodes = d3.stack().keys(keys)(dataNew);
-   
+    console.log('update', nodes)
     nodeG
       .selectAll(`#node-${row}`)
       .data(nodes, (d) => d.key)
@@ -212,7 +219,7 @@ export default function StackedBarChart (
             .attr('visibility', (d) =>
               d[0][1] - d[0][0] < 80 ? 'hidden' : 'visible'
             );
-
+            
           newText
             .append('text')
             .attr('transform', (d) => `translate(0, ${10})`)
@@ -221,7 +228,7 @@ export default function StackedBarChart (
             .attr('font-weight', 'normal')
             .attr('dominant-baseline', 'middle')
             .attr('text-anchor', 'middle')
-            .text((d) => data[d.key].value);
+            .text((d) => Number(data[d.key].value.toPrecision(3)));
 
           return newText;
         },
@@ -242,7 +249,7 @@ export default function StackedBarChart (
               d[0][1] - d[0][0] < 80 ? 'hidden' : 'visible'
             );
 
-          update.select('text').text((d) => data[d.key].value);
+          update.select('text').text((d) => Number(data[d.key].value.toPrecision(3)));
 
           return newUpdate;
         },
@@ -308,8 +315,16 @@ export default function StackedBarChart (
     }
   }
 
+  function convertToArray(input) {
+    if (Array.isArray(input) && input.length > 0) {
+        return input; // Return the array as is
+    } else if (typeof input === 'object' && Object.keys(input).length > 0) {
+        return [input]; // Wrap the object with brackets
+    } else {
+        return null; 
+    }
+}
 
-  
   return {
     /* public data update  method */
     updateBar: (dd) => {
